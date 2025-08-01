@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Timetable System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h2>Smart Timetable System</h2>
+            </div>
+            <div class="nav-menu">
+                <select id="roleSelector" class="role-selector">
+                    <option value="admin">Admin</option>
+                    <option value="faculty">Faculty</option>
+                    <option value="student">Student</option>
+                </select>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Admin Dashboard -->
+        <div id="adminPanel" class="panel active">
+            <div class="panel-header">
+                <h3>Admin Dashboard</h3>
+                <p>Manage all system components and generate timetables</p>
+            </div>
+
+            <div class="admin-tabs">
+                <button class="tab-btn active" data-tab="faculty">Faculty</button>
+                <button class="tab-btn" data-tab="batches">Batches</button>
+                <button class="tab-btn" data-tab="subjects">Subjects</button>
+                <button class="tab-btn" data-tab="classrooms">Classrooms</button>
+                <button class="tab-btn" data-tab="mappings">Subject Mapping</button>
+                <button class="tab-btn" data-tab="generate">Generate Timetable</button>
+            </div>
+
+            <!-- Faculty Tab -->
+            <div id="facultyTab" class="tab-content active">
+                <div class="section-header">
+                    <h4>Faculty Management</h4>
+                    <button class="btn btn-primary" onclick="openModal('facultyModal')">Add Faculty</button>
+                </div>
+                <div class="table-container">
+                    <table id="facultyTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Department</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Batches Tab -->
+            <div id="batchesTab" class="tab-content">
+                <div class="section-header">
+                    <h4>Batch Management</h4>
+                    <button class="btn btn-primary" onclick="openModal('batchModal')">Add Batch</button>
+                </div>
+                <div class="table-container">
+                    <table id="batchTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Year</th>
+                                <th>Semester</th>
+                                <th>Students</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Subjects Tab -->
+            <div id="subjectsTab" class="tab-content">
+                <div class="section-header">
+                    <h4>Subject Management</h4>
+                    <button class="btn btn-primary" onclick="openModal('subjectModal')">Add Subject</button>
+                </div>
+                <div class="table-container">
+                    <table id="subjectTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Code</th>
+                                <th>Type</th>
+                                <th>Credits</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Classrooms Tab -->
+            <div id="classroomsTab" class="tab-content">
+                <div class="section-header">
+                    <h4>Classroom Management</h4>
+                    <button class="btn btn-primary" onclick="openModal('classroomModal')">Add Classroom</button>
+                </div>
+                <div class="table-container">
+                    <table id="classroomTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Capacity</th>
+                                <th>Type</th>
+                                <th>Building</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Mappings Tab -->
+            <div id="mappingsTab" class="tab-content">
+                <div class="section-header">
+                    <h4>Subject-Batch Mapping</h4>
+                    <button class="btn btn-primary" onclick="openModal('mappingModal')">Add Mapping</button>
+                </div>
+                <div class="table-container">
+                    <table id="mappingTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Code</th>
+                                <th>Type</th>
+                                <th>Batch</th>
+                                <th>Faculty</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Generate Tab -->
+            <div id="generateTab" class="tab-content">
+                <div class="generate-section">
+                    <h4>Generate Timetable</h4>
+                    <p>Click the button below to automatically generate optimized timetables for all batches.</p>
+                    <div class="generate-controls">
+                        <button class="btn btn-success btn-large" onclick="generateTimetable()">
+                            <span class="btn-icon">⚡</span>
+                            Generate Smart Timetable
+                        </button>
+                    </div>
+                    <div id="generateStatus" class="status-message"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Faculty Panel -->
+        <div id="facultyPanel" class="panel">
+            <div class="panel-header">
+                <h3>Faculty Dashboard</h3>
+                <p>View your teaching schedule</p>
+            </div>
+            <div class="faculty-controls">
+                <select id="facultySelect" class="form-select">
+                    <option value="">Select Faculty</option>
+                </select>
+            </div>
+            <div id="facultyTimetable" class="timetable-container"></div>
+        </div>
+
+        <!-- Student Panel -->
+        <div id="studentPanel" class="panel">
+            <div class="panel-header">
+                <h3>Student Dashboard</h3>
+                <p>View your batch timetable</p>
+            </div>
+            <div class="student-controls">
+                <select id="batchSelect" class="form-select">
+                    <option value="">Select Batch</option>
+                </select>
+            </div>
+            <div id="studentTimetable" class="timetable-container"></div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="facultyModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('facultyModal')">&times;</span>
+            <h3>Add Faculty</h3>
+            <form id="facultyForm" onsubmit="addFaculty(event)">
+                <div class="form-group">
+                    <label for="facultyName">Name</label>
+                    <input type="text" id="facultyName" required>
+                </div>
+                <div class="form-group">
+                    <label for="facultyEmail">Email</label>
+                    <input type="email" id="facultyEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="facultyPhone">Phone</label>
+                    <input type="tel" id="facultyPhone">
+                </div>
+                <div class="form-group">
+                    <label for="facultyDepartment">Department</label>
+                    <input type="text" id="facultyDepartment">
+                </div>
+                <button type="submit" class="btn btn-primary">Add Faculty</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="batchModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('batchModal')">&times;</span>
+            <h3>Add Batch</h3>
+            <form id="batchForm" onsubmit="addBatch(event)">
+                <div class="form-group">
+                    <label for="batchName">Name</label>
+                    <input type="text" id="batchName" required placeholder="e.g., IT-A">
+                </div>
+                <div class="form-group">
+                    <label for="batchYear">Year</label>
+                    <input type="number" id="batchYear" required min="1" max="4">
+                </div>
+                <div class="form-group">
+                    <label for="batchSemester">Semester</label>
+                    <input type="number" id="batchSemester" required min="1" max="8">
+                </div>
+                <div class="form-group">
+                    <label for="batchStudents">Student Count</label>
+                    <input type="number" id="batchStudents" required min="1">
+                </div>
+                <button type="submit" class="btn btn-primary">Add Batch</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="subjectModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('subjectModal')">&times;</span>
+            <h3>Add Subject</h3>
+            <form id="subjectForm" onsubmit="addSubject(event)">
+                <div class="form-group">
+                    <label for="subjectName">Name</label>
+                    <input type="text" id="subjectName" required>
+                </div>
+                <div class="form-group">
+                    <label for="subjectCode">Code</label>
+                    <input type="text" id="subjectCode" required>
+                </div>
+                <div class="form-group">
+                    <label for="subjectType">Type</label>
+                    <select id="subjectType" required>
+                        <option value="">Select Type</option>
+                        <option value="theory">Theory</option>
+                        <option value="lab">Lab</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="subjectCredits">Credits</label>
+                    <input type="number" id="subjectCredits" required min="1" max="6" value="3">
+                </div>
+                <button type="submit" class="btn btn-primary">Add Subject</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="classroomModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('classroomModal')">&times;</span>
+            <h3>Add Classroom</h3>
+            <form id="classroomForm" onsubmit="addClassroom(event)">
+                <div class="form-group">
+                    <label for="classroomName">Name</label>
+                    <input type="text" id="classroomName" required>
+                </div>
+                <div class="form-group">
+                    <label for="classroomCapacity">Capacity</label>
+                    <input type="number" id="classroomCapacity" required min="1">
+                </div>
+                <div class="form-group">
+                    <label for="classroomType">Type</label>
+                    <select id="classroomType" required>
+                        <option value="">Select Type</option>
+                        <option value="theory">Theory</option>
+                        <option value="lab">Lab</option>
+                        <option value="both">Both</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="classroomBuilding">Building</label>
+                    <input type="text" id="classroomBuilding">
+                </div>
+                <button type="submit" class="btn btn-primary">Add Classroom</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="mappingModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('mappingModal')">&times;</span>
+            <h3>Add Subject-Batch Mapping</h3>
+            <form id="mappingForm" onsubmit="addMapping(event)">
+                <div class="form-group">
+                    <label for="mappingSubject">Subject</label>
+                    <select id="mappingSubject" required>
+                        <option value="">Select Subject</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="mappingBatch">Batch</label>
+                    <select id="mappingBatch" required>
+                        <option value="">Select Batch</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="mappingFaculty">Faculty</label>
+                    <select id="mappingFaculty" required>
+                        <option value="">Select Faculty</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Mapping</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
