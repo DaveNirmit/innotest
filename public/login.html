@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Smart Time Gen</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <img src="Logo-Innoapp.jpg" alt="Smart Time Gen" class="login-logo">
+                <h1>Smart Time Gen</h1>
+                <p>Smart Timetable Generation System</p>
+            </div>
+            
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="role">Login as</label>
+                    <select id="role" name="role" required>
+                        <option value="">Select Role</option>
+                        <option value="admin">👨‍💼 Admin</option>
+                        <option value="faculty">👨‍🏫 Faculty</option>
+                        <option value="student">👨‍🎓 Student</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-login">Login</button>
+                
+                <div id="loginError" class="login-error" style="display: none;"></div>
+            </form>
+            
+            <div class="login-demo">
+                <h4>Demo Credentials:</h4>
+                <div class="demo-credentials">
+                    <div><strong>Admin:</strong> admin / admin123</div>
+                    <div><strong>Faculty:</strong> faculty / faculty123</div>
+                    <div><strong>Student:</strong> student / student123</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="login.js"></script>
+</body>
+</html>

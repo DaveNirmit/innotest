@@ -3,28 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Timetable System</title>
+    <title>Dashboard - Smart Time Gen</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-brand">
-                <h2>Smart Timetable System</h2>
+                <img src="Logo-Innoapp.jpg" alt="Smart Time Gen" class="nav-logo">
+                <h2>Smart Time Gen</h2>
             </div>
             <div class="nav-menu">
-                <select id="roleSelector" class="role-selector">
-                    <option value="admin">Admin</option>
-                    <option value="faculty">Faculty</option>
-                    <option value="student">Student</option>
-                </select>
+                <span id="userInfo" class="user-info"></span>
+                <button id="logoutBtn" class="btn btn-secondary">Logout</button>
             </div>
         </div>
     </nav>
 
     <div class="container">
         <!-- Admin Dashboard -->
-        <div id="adminPanel" class="panel active">
+        <div id="adminPanel" class="panel">
             <div class="panel-header">
                 <h3>Admin Dashboard</h3>
                 <p>Manage all system components and generate timetables</p>
@@ -32,10 +30,12 @@
 
             <div class="admin-tabs">
                 <button class="tab-btn active" data-tab="faculty">Faculty</button>
+                <button class="tab-btn" data-tab="students">Students</button>
                 <button class="tab-btn" data-tab="batches">Batches</button>
                 <button class="tab-btn" data-tab="subjects">Subjects</button>
                 <button class="tab-btn" data-tab="classrooms">Classrooms</button>
                 <button class="tab-btn" data-tab="mappings">Subject Mapping</button>
+                <button class="tab-btn" data-tab="manual">Manual Assignment</button>
                 <button class="tab-btn" data-tab="generate">Generate Timetable</button>
             </div>
 
@@ -53,6 +53,28 @@
                                 <th>Email</th>
                                 <th>Phone</th>
                                 <th>Department</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Students Tab -->
+            <div id="studentsTab" class="tab-content">
+                <div class="section-header">
+                    <h4>Student Management</h4>
+                    <button class="btn btn-primary" onclick="openModal('studentModal')">Add Student</button>
+                </div>
+                <div class="table-container">
+                    <table id="studentTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Roll Number</th>
+                                <th>Email</th>
+                                <th>Batch</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -150,6 +172,25 @@
                 </div>
             </div>
 
+            <!-- Manual Assignment Tab -->
+            <div id="manualTab" class="tab-content">
+                <div class="section-header">
+                    <h4>Manual Slot Assignment</h4>
+                    <div class="manual-controls">
+                        <button class="btn btn-primary" onclick="openModal('manualAssignModal')">Assign Slot</button>
+                        <button class="btn btn-secondary" onclick="loadManualTimetable()">Refresh View</button>
+                    </div>
+                </div>
+                <div id="manualTimetableContainer" class="manual-timetable-container">
+                    <div class="timetable-filters">
+                        <select id="manualBatchFilter" class="form-select">
+                            <option value="">All Batches</option>
+                        </select>
+                    </div>
+                    <div id="manualTimetable" class="timetable-container"></div>
+                </div>
+            </div>
+
             <!-- Generate Tab -->
             <div id="generateTab" class="tab-content">
                 <div class="generate-section">
@@ -172,11 +213,6 @@
                 <h3>Faculty Dashboard</h3>
                 <p>View your teaching schedule</p>
             </div>
-            <div class="faculty-controls">
-                <select id="facultySelect" class="form-select">
-                    <option value="">Select Faculty</option>
-                </select>
-            </div>
             <div id="facultyTimetable" class="timetable-container"></div>
         </div>
 
@@ -186,11 +222,6 @@
                 <h3>Student Dashboard</h3>
                 <p>View your batch timetable</p>
             </div>
-            <div class="student-controls">
-                <select id="batchSelect" class="form-select">
-                    <option value="">Select Batch</option>
-                </select>
-            </div>
             <div id="studentTimetable" class="timetable-container"></div>
         </div>
     </div>
@@ -199,8 +230,9 @@
     <div id="facultyModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('facultyModal')">&times;</span>
-            <h3>Add Faculty</h3>
-            <form id="facultyForm" onsubmit="addFaculty(event)">
+            <h3 id="facultyModalTitle">Add Faculty</h3>
+            <form id="facultyForm" onsubmit="saveFaculty(event)">
+                <input type="hidden" id="facultyId">
                 <div class="form-group">
                     <label for="facultyName">Name</label>
                     <input type="text" id="facultyName" required>
@@ -217,7 +249,36 @@
                     <label for="facultyDepartment">Department</label>
                     <input type="text" id="facultyDepartment">
                 </div>
-                <button type="submit" class="btn btn-primary">Add Faculty</button>
+                <button type="submit" class="btn btn-primary">Save Faculty</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="studentModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('studentModal')">&times;</span>
+            <h3 id="studentModalTitle">Add Student</h3>
+            <form id="studentForm" onsubmit="saveStudent(event)">
+                <input type="hidden" id="studentId">
+                <div class="form-group">
+                    <label for="studentName">Name</label>
+                    <input type="text" id="studentName" required>
+                </div>
+                <div class="form-group">
+                    <label for="studentRoll">Roll Number</label>
+                    <input type="text" id="studentRoll" required>
+                </div>
+                <div class="form-group">
+                    <label for="studentEmail">Email</label>
+                    <input type="email" id="studentEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="studentBatch">Batch</label>
+                    <select id="studentBatch" required>
+                        <option value="">Select Batch</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Student</button>
             </form>
         </div>
     </div>
@@ -225,8 +286,9 @@
     <div id="batchModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('batchModal')">&times;</span>
-            <h3>Add Batch</h3>
-            <form id="batchForm" onsubmit="addBatch(event)">
+            <h3 id="batchModalTitle">Add Batch</h3>
+            <form id="batchForm" onsubmit="saveBatch(event)">
+                <input type="hidden" id="batchId">
                 <div class="form-group">
                     <label for="batchName">Name</label>
                     <input type="text" id="batchName" required placeholder="e.g., IT-A">
@@ -243,7 +305,7 @@
                     <label for="batchStudents">Student Count</label>
                     <input type="number" id="batchStudents" required min="1">
                 </div>
-                <button type="submit" class="btn btn-primary">Add Batch</button>
+                <button type="submit" class="btn btn-primary">Save Batch</button>
             </form>
         </div>
     </div>
@@ -251,8 +313,9 @@
     <div id="subjectModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('subjectModal')">&times;</span>
-            <h3>Add Subject</h3>
-            <form id="subjectForm" onsubmit="addSubject(event)">
+            <h3 id="subjectModalTitle">Add Subject</h3>
+            <form id="subjectForm" onsubmit="saveSubject(event)">
+                <input type="hidden" id="subjectId">
                 <div class="form-group">
                     <label for="subjectName">Name</label>
                     <input type="text" id="subjectName" required>
@@ -273,7 +336,7 @@
                     <label for="subjectCredits">Credits</label>
                     <input type="number" id="subjectCredits" required min="1" max="6" value="3">
                 </div>
-                <button type="submit" class="btn btn-primary">Add Subject</button>
+                <button type="submit" class="btn btn-primary">Save Subject</button>
             </form>
         </div>
     </div>
@@ -281,8 +344,9 @@
     <div id="classroomModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('classroomModal')">&times;</span>
-            <h3>Add Classroom</h3>
-            <form id="classroomForm" onsubmit="addClassroom(event)">
+            <h3 id="classroomModalTitle">Add Classroom</h3>
+            <form id="classroomForm" onsubmit="saveClassroom(event)">
+                <input type="hidden" id="classroomId">
                 <div class="form-group">
                     <label for="classroomName">Name</label>
                     <input type="text" id="classroomName" required>
@@ -304,7 +368,7 @@
                     <label for="classroomBuilding">Building</label>
                     <input type="text" id="classroomBuilding">
                 </div>
-                <button type="submit" class="btn btn-primary">Add Classroom</button>
+                <button type="submit" class="btn btn-primary">Save Classroom</button>
             </form>
         </div>
     </div>
@@ -337,6 +401,71 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <div id="manualAssignModal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close" onclick="closeModal('manualAssignModal')">&times;</span>
+            <h3>Manual Slot Assignment</h3>
+            <form id="manualAssignForm" onsubmit="assignManualSlot(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="manualBatch">Batch</label>
+                        <select id="manualBatch" required>
+                            <option value="">Select Batch</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="manualSubject">Subject</label>
+                        <select id="manualSubject" required>
+                            <option value="">Select Subject</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="manualFaculty">Faculty</label>
+                        <select id="manualFaculty" required>
+                            <option value="">Select Faculty</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="manualClassroom">Classroom</label>
+                        <select id="manualClassroom" required>
+                            <option value="">Select Classroom</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="manualDay">Day</label>
+                        <select id="manualDay" required>
+                            <option value="">Select Day</option>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="manualTimeSlot">Time Slot</label>
+                        <select id="manualTimeSlot" required>
+                            <option value="">Select Time Slot</option>
+                            <option value="1">10:45 - 11:45</option>
+                            <option value="2">11:45 - 12:45</option>
+                            <option value="3">12:45 - 13:45</option>
+                            <option value="4">14:15 - 15:15</option>
+                            <option value="5">15:15 - 16:15</option>
+                            <option value="6">16:15 - 17:30</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="conflictWarning" class="conflict-warning" style="display: none;"></div>
+                <button type="submit" class="btn btn-primary">Assign Slot</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
 </body>
 </html>

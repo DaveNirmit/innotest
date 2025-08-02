@@ -21,7 +21,19 @@ function initDatabase() {
       password TEXT NOT NULL,
       role TEXT NOT NULL CHECK (role IN ('admin', 'faculty', 'student')),
       name TEXT NOT NULL,
+      batch_id INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    -- Students table
+    CREATE TABLE IF NOT EXISTS students (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      roll_number TEXT UNIQUE NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      batch_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (batch_id) REFERENCES batch(id)
     );
 
     -- Faculty table
@@ -115,9 +127,11 @@ function initDatabase() {
     (5, '15:15', '16:15', 0),
     (6, '16:15', '17:30', 0);
 
-    -- Insert default admin user
+    -- Insert default users
     INSERT OR IGNORE INTO users (username, password, role, name) VALUES
-    ('admin', '$2b$10$8K1p/a0dTLlAc8/vYrXUMOHsH9X7.7nQXrM/LF0XJJ8N0Zk0Zk0Zk', 'admin', 'System Administrator');
+    ('admin', 'admin123', 'admin', 'System Administrator'),
+    ('faculty', 'faculty123', 'faculty', 'Demo Faculty'),
+    ('student', 'student123', 'student', 'Demo Student');
   `;
 
   db.exec(schema, (err) => {
@@ -139,6 +153,7 @@ function getContentType(filePath) {
     '.json': 'application/json',
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
     '.ico': 'image/x-icon'
   };
   return mimeTypes[ext] || 'text/plain';
@@ -175,8 +190,35 @@ async function handleAPI(req, res, pathname) {
   const method = req.method;
   
   try {
+    // Login route
+    if (pathname === '/api/login' && method === 'POST') {
+      const body = await parseBody(req);
+      const { username, password, role } = body;
+      
+      db.get('SELECT * FROM users WHERE username = ? AND password = ? AND role = ?',
+        [username, password, role], (err, user) => {
+          if (err) return sendJSON(res, { error: err.message }, 500);
+          
+          if (user) {
+            // In a real app, generate JWT token here
+            sendJSON(res, { 
+              user: {
+                id: user.id,
+                username: user.username,
+                name: user.name,
+                role: user.role,
+                batch_id: user.batch_id,
+                token: 'demo-token'
+              }
+            });
+          } else {
+            sendJSON(res, { error: 'Invalid credentials' }, 401);
+          }
+        });
+    }
+    
     // Faculty routes
-    if (pathname === '/api/faculty' && method === 'GET') {
+    else if (pathname === '/api/faculty' && method === 'GET') {
       db.all('SELECT * FROM faculty ORDER BY name', (err, rows) => {
         if (err) return sendJSON(res, { error: err.message }, 500);
         sendJSON(res, rows);
@@ -192,6 +234,74 @@ async function handleAPI(req, res, pathname) {
           if (err) return sendJSON(res, { error: err.message }, 500);
           sendJSON(res, { id: this.lastID, message: 'Faculty added successfully' });
         });
+    }
+    
+    else if (pathname.startsWith('/api/faculty/') && method === 'PUT') {
+      const id = pathname.split('/')[3];
+      const body = await parseBody(req);
+      const { name, email, phone, department } = body;
+      
+      db.run('UPDATE faculty SET name = ?, email = ?, phone = ?, department = ? WHERE id = ?',
+        [name, email, phone, department, id], function(err) {
+          if (err) return sendJSON(res, { error: err.message }, 500);
+          sendJSON(res, { message: 'Faculty updated successfully' });
+        });
+    }
+    
+    else if (pathname.startsWith('/api/faculty/') && method === 'DELETE') {
+      const id = pathname.split('/')[3];
+      
+      db.run('DELETE FROM faculty WHERE id = ?', [id], function(err) {
+        if (err) return sendJSON(res, { error: err.message }, 500);
+        sendJSON(res, { message: 'Faculty deleted successfully' });
+      });
+    }
+    
+    // Student routes
+    else if (pathname === '/api/students' && method === 'GET') {
+      const query = `
+        SELECT s.*, b.name as batch_name
+        FROM students s
+        LEFT JOIN batch b ON s.batch_id = b.id
+        ORDER BY s.name
+      `;
+      
+      db.all(query, (err, rows) => {
+        if (err) return sendJSON(res, { error: err.message }, 500);
+        sendJSON(res, rows);
+      });
+    }
+    
+    else if (pathname === '/api/students' && method === 'POST') {
+      const body = await parseBody(req);
+      const { name, roll_number, email, batch_id } = body;
+      
+      db.run('INSERT INTO students (name, roll_number, email, batch_id) VALUES (?, ?, ?, ?)',
+        [name, roll_number, email, batch_id], function(err) {
+          if (err) return sendJSON(res, { error: err.message }, 500);
+          sendJSON(res, { id: this.lastID, message: 'Student added successfully' });
+        });
+    }
+    
+    else if (pathname.startsWith('/api/students/') && method === 'PUT') {
+      const id = pathname.split('/')[3];
+      const body = await parseBody(req);
+      const { name, roll_number, email, batch_id } = body;
+      
+      db.run('UPDATE students SET name = ?, roll_number = ?, email = ?, batch_id = ? WHERE id = ?',
+        [name, roll_number, email, batch_id, id], function(err) {
+          if (err) return sendJSON(res, { error: err.message }, 500);
+          sendJSON(res, { message: 'Student updated successfully' });
+        });
+    }
+    
+    else if (pathname.startsWith('/api/students/') && method === 'DELETE') {
+      const id = pathname.split('/')[3];
+      
+      db.run('DELETE FROM students WHERE id = ?', [id], function(err) {
+        if (err) return sendJSON(res, { error: err.message }, 500);
+        sendJSON(res, { message: 'Student deleted successfully' });
+      });
     }
     
     // Batch routes
@@ -213,6 +323,27 @@ async function handleAPI(req, res, pathname) {
         });
     }
     
+    else if (pathname.startsWith('/api/batches/') && method === 'PUT') {
+      const id = pathname.split('/')[3];
+      const body = await parseBody(req);
+      const { name, year, semester, student_count } = body;
+      
+      db.run('UPDATE batch SET name = ?, year = ?, semester = ?, student_count = ? WHERE id = ?',
+        [name, year, semester, student_count, id], function(err) {
+          if (err) return sendJSON(res, { error: err.message }, 500);
+          sendJSON(res, { message: 'Batch updated successfully' });
+        });
+    }
+    
+    else if (pathname.startsWith('/api/batches/') && method === 'DELETE') {
+      const id = pathname.split('/')[3];
+      
+      db.run('DELETE FROM batch WHERE id = ?', [id], function(err) {
+        if (err) return sendJSON(res, { error: err.message }, 500);
+        sendJSON(res, { message: 'Batch deleted successfully' });
+      });
+    }
+    
     // Subject routes
     else if (pathname === '/api/subjects' && method === 'GET') {
       db.all('SELECT * FROM subject ORDER BY name', (err, rows) => {
@@ -232,6 +363,27 @@ async function handleAPI(req, res, pathname) {
         });
     }
     
+    else if (pathname.startsWith('/api/subjects/') && method === 'PUT') {
+      const id = pathname.split('/')[3];
+      const body = await parseBody(req);
+      const { name, code, type, credits } = body;
+      
+      db.run('UPDATE subject SET name = ?, code = ?, type = ?, credits = ? WHERE id = ?',
+        [name, code, type, credits, id], function(err) {
+          if (err) return sendJSON(res, { error: err.message }, 500);
+          sendJSON(res, { message: 'Subject updated successfully' });
+        });
+    }
+    
+    else if (pathname.startsWith('/api/subjects/') && method === 'DELETE') {
+      const id = pathname.split('/')[3];
+      
+      db.run('DELETE FROM subject WHERE id = ?', [id], function(err) {
+        if (err) return sendJSON(res, { error: err.message }, 500);
+        sendJSON(res, { message: 'Subject deleted successfully' });
+      });
+    }
+    
     // Classroom routes
     else if (pathname === '/api/classrooms' && method === 'GET') {
       db.all('SELECT * FROM classroom ORDER BY name', (err, rows) => {
@@ -249,6 +401,27 @@ async function handleAPI(req, res, pathname) {
           if (err) return sendJSON(res, { error: err.message }, 500);
           sendJSON(res, { id: this.lastID, message: 'Classroom added successfully' });
         });
+    }
+    
+    else if (pathname.startsWith('/api/classrooms/') && method === 'PUT') {
+      const id = pathname.split('/')[3];
+      const body = await parseBody(req);
+      const { name, capacity, type, building } = body;
+      
+      db.run('UPDATE classroom SET name = ?, capacity = ?, type = ?, building = ? WHERE id = ?',
+        [name, capacity, type, building, id], function(err) {
+          if (err) return sendJSON(res, { error: err.message }, 500);
+          sendJSON(res, { message: 'Classroom updated successfully' });
+        });
+    }
+    
+    else if (pathname.startsWith('/api/classrooms/') && method === 'DELETE') {
+      const id = pathname.split('/')[3];
+      
+      db.run('DELETE FROM classroom WHERE id = ?', [id], function(err) {
+        if (err) return sendJSON(res, { error: err.message }, 500);
+        sendJSON(res, { message: 'Classroom deleted successfully' });
+      });
     }
     
     // Subject-Batch mapping routes
@@ -278,6 +451,45 @@ async function handleAPI(req, res, pathname) {
           if (err) return sendJSON(res, { error: err.message }, 500);
           sendJSON(res, { id: this.lastID, message: 'Subject-Batch mapping added successfully' });
         });
+    }
+    
+    else if (pathname.startsWith('/api/subject-batch/') && method === 'DELETE') {
+      const id = pathname.split('/')[3];
+      
+      db.run('DELETE FROM subject_batch WHERE id = ?', [id], function(err) {
+        if (err) return sendJSON(res, { error: err.message }, 500);
+        sendJSON(res, { message: 'Mapping deleted successfully' });
+      });
+    }
+    
+    // Manual assignment route
+    else if (pathname === '/api/manual-assign' && method === 'POST') {
+      const body = await parseBody(req);
+      const { batch_id, subject_id, faculty_id, classroom_id, day_of_week, time_slot_id } = body;
+      
+      // Check for conflicts
+      const conflictQuery = `
+        SELECT COUNT(*) as conflicts FROM timetable 
+        WHERE day_of_week = ? AND time_slot_id = ? 
+        AND (batch_id = ? OR faculty_id = ? OR classroom_id = ?)
+      `;
+      
+      db.get(conflictQuery, [day_of_week, time_slot_id, batch_id, faculty_id, classroom_id], (err, result) => {
+        if (err) return sendJSON(res, { error: err.message }, 500);
+        
+        if (result.conflicts > 0) {
+          return sendJSON(res, { error: 'Conflict detected: Batch, Faculty, or Classroom already assigned at this time' }, 400);
+        }
+        
+        // Insert the assignment
+        db.run(`
+          INSERT INTO timetable (batch_id, subject_id, faculty_id, classroom_id, day_of_week, time_slot_id, duration)
+          VALUES (?, ?, ?, ?, ?, ?, 1)
+        `, [batch_id, subject_id, faculty_id, classroom_id, day_of_week, time_slot_id], function(err) {
+          if (err) return sendJSON(res, { error: err.message }, 500);
+          sendJSON(res, { id: this.lastID, message: 'Slot assigned successfully' });
+        });
+      });
     }
     
     // Timetable generation
@@ -319,6 +531,16 @@ async function handleAPI(req, res, pathname) {
       db.all(query, params, (err, rows) => {
         if (err) return sendJSON(res, { error: err.message }, 500);
         sendJSON(res, rows);
+      });
+    }
+    
+    // Delete timetable entry
+    else if (pathname.startsWith('/api/timetable/') && method === 'DELETE') {
+      const id = pathname.split('/')[3];
+      
+      db.run('DELETE FROM timetable WHERE id = ?', [id], function(err) {
+        if (err) return sendJSON(res, { error: err.message }, 500);
+        sendJSON(res, { message: 'Timetable entry deleted successfully' });
       });
     }
     
@@ -493,8 +715,15 @@ const server = http.createServer(async (req, res) => {
     return handleAPI(req, res, pathname);
   }
   
+  // Redirect root to login
+  if (pathname === '/') {
+    res.writeHead(302, { 'Location': '/login.html' });
+    res.end();
+    return;
+  }
+  
   // Handle static files
-  let filePath = pathname === '/' ? '/public/index.html' : `/public${pathname}`;
+  let filePath = `/public${pathname}`;
   filePath = path.join(__dirname, filePath);
   
   // Check if file exists
